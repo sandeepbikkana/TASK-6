@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U strapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  strapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: strapi-backend
+    restart: unless-stopped
+    ports:
+      - "1337:1337"
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: postgres
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_SSL: "false"
+      HOST: 0.0.0.0
+      PORT: 1337
+      NODE_ENV: production
+      APP_KEY1: ba93e7f9a88b4e648aa9e2d1d8b3c7ff
+      APP_KEY2: 8c44e9a0dc4f452da9b2b6e8a09bfc3d
+      APP_KEY3: fc8c319a89d64c95b8e6f4420f2e7da4
+      APP_KEY4: b7b3a4e26bb94a09a5e6288d2f2e0d19
+      JWT_SECRET: JHNKA9NVfw0Oi2VsIA06Tw==
+    volumes:
+      - ./public/uploads:/app/public/uploads
+      - ./database:/app/database
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+
