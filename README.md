@@ -1,117 +1,198 @@
-# Welcome to PearlThoughts Internship Program
+Task-1 : Strapi Local Setup & Content Type Creation
+ Strapi Local Setup & Content Type Creation
+## Objectives
+- Clone the Strapi repository from GitHub  
+- Run Strapi locally  
+- Explore project folder structure  
+- Access Admin Panel  
+- Create Content Type
+---
+## Steps Performed
+## 1. Clone Strapi Repository git clone 
+```
+git clone https://github.com/strapi/strapi.git
+```
+## 2. Install Dependencies
+ ```
+- npm install
+- npx
+```
+## 3. Explore Folder Structure
+- Check the project folders like src/, package.json, node_modules/.
+## 4. Create a New Strapi Project
+```
+- npx create-strapi@latest  lovepreet-strapi-project --quickstart
+  ```
+ - This creates a new folder lovepreet-strapi-project
 
-We are thrilled to welcome you to the PearlThoughts team! This internship is designed to provide you with valuable hands-on experience, deepen your understanding of technology, and help you hone your skills in a collaborative, innovative environment.
+    
 
-# Policies and Guidelines
+## 5. Run Strapi Locally
+```
+- cd lovepreet-strapi-project
+- npm run develop
+```
+##6. Admin Panel
+- Admin Panel URL: [http://localhost:1337/admin]
+- First-time login: create admin account (email + password).
+## 7. Create Content Type: 
+- Fields:
+- title → Short text    
+- Number→ Long Integer    
+- EMail → Mail
+- Publish.
 
-## Training and Attendance
+File structure:
+my-project/
+│
+├── config/               → Strapi configurations
+├── data/                 → SQLite database
+├── public/               → Uploaded files
+├── src/                  → Main application code
+│   ├── admin/            → Admin panel UI logic
+│   ├── api/              → Content types + routes + controllers
+│   ├── components/       → Reusable components
+│   ├── extensions/       → Plugin customizations
+│   └── index.js
+│
+├── .env                  → Environment variables
+├── package.json          → Dependencies + scripts and lock-package -> after all the dependencies installed by npm stated here 
+└── .tmp/                 → Runtime generated files
 
-### Training Sessions
-- **Schedule**: Every weekday at 10:30 AM 
-- **Attendance**: MANDATORY - Missing sessions affects your evaluation
-- **Duration**: Full attention required during training hours
 
-### Working Hours
-- **Availability**: 10 AM to 6 PM on all working days
-- **Active Participation**: Required in all team activities and discussions
 
-## Daily Requirements
 
-### 📝 Pull Requests (PR)
-- **Deadline**: Must be raised by end of each day
-- **Content**: Include all work completed during the day
-- **Consequence**: No PR = Marked absent for that day
+Task-2 
+# Strapi Project – Postgres & Docker Setup
 
-### 📋 Status Updates
-- Post daily progress in your team channel
-- Use the [[../Templates/Daily-Status-Template|Daily Status Template]]
-- Be specific about completed tasks and blockers
+This update migrates the project from SQLite to PostgreSQL and introduces a complete Dockerized workflow using a custom Dockerfile and a docker-compose setup. The goal was to ensure a production-ready environment and resolve issues caused by SQLite when using Node’s Alpine base image.
 
-## Task Management
+---
 
-### Assigned Tasks
-- Tasks assigned during morning training sessions
-- **Timely Completion**: Critical for your evaluation
-- Document challenges and solutions
+## 🚀 What Was Done
 
-### Task Tracking
-- Update task status regularly
-- Communicate blockers immediately
-- Seek help when needed
+* Switched database from **SQLite → PostgreSQL**
+* Updated all **environment variables** to match Postgres
+* Fixed issues caused by Node + SQLite dependencies
+* Added a production-ready **Dockerfile**
+* Added a **docker-compose.yml** to run Strapi + Postgres together
+* Cleaned build artifacts and rebuilt Strapi admin panel
+* Verified containers and resolved port conflicts
 
-## Evaluation Process
+---
 
-### Weekly Evaluations
-- **When**: Every Friday
-- **Criteria**:
-  - Task completion and quality
-  - Collaboration and teamwork
-  - Learning progress
-  - Professional conduct
+# 📦 Environment Variables (`.env.docker`)
 
-### Performance Metrics
-- Code quality and best practices
-- Meeting deadlines
-- Communication effectiveness
-- Problem-solving approach
+```env
+# Server
+HOST=0.0.0.0
+PORT=1337
+NODE_ENV=production
 
-## Communication Channels
+# Keys (replace with real secrets)
+APP_KEYS=something1,something2
+API_TOKEN_SALT=somethingrandom
+ADMIN_JWT_SECRET=somethingsecure
+TRANSFER_TOKEN_SALT=somethingrandom
+JWT_SECRET=somethingrandom
 
-### MS Teams Channels
+# Database (Postgres)
+DATABASE_CLIENT=postgres
+DATABASE_HOST=db
+DATABASE_PORT=5432
+DATABASE_NAME=strapi
+DATABASE_USERNAME=strapi
+DATABASE_PASSWORD=strapi
+DATABASE_SSL=false
+```
 
-| Channel | Purpose |
-|---------|------|
-| **Internship** | Key updates and announcements |
-| **Support** | Cloud resources and technical guidance |
-| **DevOps** | Deployment assistance and DevOps queries |
-| **Team [Name]** | Your team's collaboration space |
+---
 
-### Email Communication
-- **Support Queries**: hr@pearlthoughts.com
-- **Topics**: LOA requests, Teams access, evaluation results
-- **Important**: Avoid raising these in training sessions or Teams channels
+# 🛠 Dockerfile (for Strapi App)
 
-## Termination Policy
+```dockerfile
+FROM node:20-alpine
 
-### ⚠️ Automatic Termination Triggers
-- Missing 3 consecutive training sessions
-- Failing to submit PR for 3 consecutive days
-- No prior notice will be given
+WORKDIR /app
 
-## Professional Conduct
+COPY package*.json ./
 
-### Expected Behavior
-1. **Professionalism**: Maintain professional demeanor in all interactions
-2. **Respect**: Treat all team members with respect
-3. **Punctuality**: Be on time for all meetings and deadlines
-4. **Integrity**: Be honest about your progress and challenges
-5. **Collaboration**: Actively help and learn from peers
+RUN npm install
 
-## Support Resources
+COPY . .
 
-### Getting Help
-- Technical issues: Post in Support channel
-- DevOps help: Use DevOps channel
-- Administrative queries: Email hr@pearlthoughts.com
-- Task clarification: Ask your mentor during training
+RUN npm run build
 
-## Best Practices
+EXPOSE 1337
 
-### Code Quality
-- Follow project coding standards
-- Write clean, documented code
-- Test your changes before PR
-- Review peers' code constructively
+CMD ["npm", "start"]
+```
 
-### Documentation
-- Document your learning journey
-- Share helpful resources with team
-- Maintain clear commit messages
-- Update project documentation
+---
 
-## Your Journey Starts Here
+# 🐳 docker-compose.yml
 
-We are excited to have you on board and look forward to seeing you grow and succeed during your time with us. 
+```yaml
+version: "3.8"
 
-**Welcome to PearlThoughts—let's embark on this journey together!**
-# The-Config-Crew
+services:
+  strapi-app:
+    build: .
+    container_name: strapi-app
+    env_file: .env.docker
+    ports:
+      - "1337:1337"
+    depends_on:
+      - strapi-db
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  strapi-db:
+    image: postgres:15
+    container_name: strapi-db
+    environment:
+      POSTGRES_USER: strapi
+      POSTGRES_PASSWORD: strapi
+      POSTGRES_DB: strapi
+    ports:
+      - "5433:5432"   # changed to avoid local port conflict
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+---
+
+# ▶️ Running the App
+
+```bash
+docker compose up --build
+```
+
+Visit the admin panel:
+
+```
+http://localhost:1337/admin
+```
+
+---
+
+# 🧹 Clean Before Rebuild (Optional)
+
+If needed:
+
+```bash
+npm install rimraf -g
+rimraf .cache build dist
+```
+
+---
+
+# ✔️ Result
+
+The project now runs fully containerized with a stable Postgres database, using production-grade environment configurations. Strapi builds correctly and the admin panel loads with no missing-file errors.
+
+---

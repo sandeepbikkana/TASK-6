@@ -1,0 +1,27 @@
+services:
+  strapi:
+    build: .
+    container_name: strapi-app
+    ports:
+      - "1337:1337"
+    env_file:
+      - .env.docker
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: postgres:15
+    container_name: strapi-db
+    environment:
+      POSTGRES_USER: strapi
+      POSTGRES_PASSWORD: strapi
+      POSTGRES_DB: strapi
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  pgdata:
