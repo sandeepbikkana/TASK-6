@@ -1,47 +1,33 @@
-###############################
-# 1. BUILD STAGE
-###############################
-FROM node:20 AS build
+# ---------- Stage 1: Build ----------
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
-# Accept PUBLIC_URL at build time
-ARG PUBLIC_URL
-ENV PUBLIC_URL=$PUBLIC_URL
+# Copy package files first for caching
+COPY package*.json ./
+RUN npm install
 
-# Copy only package files first (better Docker caching)
-COPY package.json package-lock.json* ./
-
-# Install required Linux esbuild binary BEFORE full install
-RUN npm install esbuild --platform=linux --force
-
-# Install dependencies
-RUN npm ci
-
-# Copy full project (includes .env)
+# Copy source code
 COPY . .
 
-# Ensure Strapi CLI is executable
-RUN chmod +x node_modules/.bin/strapi
-
-# Build Strapi Admin Panel using PUBLIC_URL
+# Build admin panel
 RUN npm run build
 
 
-###############################
-# 2. RUNTIME STAGE
-###############################
-FROM node:20-alpine
+# ---------- Stage 2: Runtime ----------
+FROM node:18-alpine
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy everything from the build stage
+# install only production deps
+COPY package*.json ./
+RUN npm install --production
+
+# Copy built app
 COPY --from=build /app /app
 
-# Expose Strapi port
 EXPOSE 1337
 
-# Start Strapi
-CMD ["npm", "start"]
+CMD ["npm", "run", "start"]
