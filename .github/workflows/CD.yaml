@@ -34,17 +34,17 @@ jobs:
           terraform_version: 1.5.0
 
       - name: Terraform Init
-        working-directory: terraform
+        working-directory: terraform/
         run: terraform init -input=false
 
       - name: Terraform Plan
-        working-directory: terraform
+        working-directory: terraform/
         run: terraform plan -input=false -var="image_tag=${{ github.event.inputs.image_tag }}" -out=tfplan
 
       - name: Terraform Apply
-        working-directory: terraform
+        working-directory: terraform/
         run: terraform apply -input=false -auto-approve tfplan
 
       - name: Show outputs
-        working-directory: terraform
+        working-directory: terraform/
         run: terraform output -json
