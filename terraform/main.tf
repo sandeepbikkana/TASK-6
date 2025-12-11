@@ -172,9 +172,6 @@ EOF
 # OUTPUTS
 #############################################
 
-output "public_ip" {
-  value = aws_instance.ubuntu.public_ip
-}
 
 output "rds_endpoint" {
   value = aws_db_instance.postgres.address
@@ -183,3 +180,4 @@ output "rds_endpoint" {
 output "ecr_repo_url" {
   value = aws_ecr_repository.strapi.repository_url
 }
+
