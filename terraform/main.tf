@@ -1,4 +1,3 @@
-
 #############################################
 # DEFAULT VPC & SUBNET DISCOVERY
 #############################################
@@ -21,7 +20,7 @@ data "aws_caller_identity" "current" {}
 #############################################
 
 resource "aws_ecr_repository" "strapi" {
-  name = "${var.docker_repo}
+  name = var.docker_repo
 
   image_scanning_configuration {
     scan_on_push = true
@@ -34,7 +33,7 @@ resource "aws_ecr_repository" "strapi" {
 
 resource "aws_security_group" "ec2_sg" {
   name        = "sandeep-ec2-sg"
-  description = "Allow SSH + Strapi"
+  description = "Allow SSH and Strapi"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
@@ -54,7 +53,6 @@ resource "aws_security_group" "ec2_sg" {
   }
 
   egress {
-    description = "Allow all outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -68,7 +66,7 @@ resource "aws_security_group" "ec2_sg" {
 
 resource "aws_security_group" "rds_sg" {
   name        = "sandeep-rds-sg"
-  description = "Allow EC2 Postgres"
+  description = "Allow EC2 to Postgres"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
@@ -80,7 +78,6 @@ resource "aws_security_group" "rds_sg" {
   }
 
   egress {
-    description = "Allow outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -102,19 +99,20 @@ resource "aws_db_subnet_group" "default" {
 #############################################
 
 resource "aws_db_instance" "postgres" {
-  identifier              = "sandeep-postgres"
+  identifier              = "sandeep-postgres-db"
   engine                  = "postgres"
   engine_version          = "15.15"
   instance_class          = "db.t3.micro"
+  allocated_storage       = 20
 
-  username            = var.db_username
-  password            = var.db_password
-  allocated_storage   = 20
-  skip_final_snapshot = true
+  username                = var.db_username
+  password                = var.db_password
 
-  publicly_accessible     = false
   db_subnet_group_name    = aws_db_subnet_group.default.name
   vpc_security_group_ids  = [aws_security_group.rds_sg.id]
+
+  skip_final_snapshot     = true
+  publicly_accessible     = false
 }
 
 #############################################
@@ -122,13 +120,13 @@ resource "aws_db_instance" "postgres" {
 #############################################
 
 resource "aws_instance" "ubuntu" {
-  ami                         = "ami-0f5ee92e2d63afc18" # Ubuntu 22.04 LTS (ap-south-1)
-  instance_type               = var.instance_type
-  subnet_id                   = data.aws_subnets.default.ids[0]
-  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
-  key_name                    = var.key_name
+  ami                    = "ami-0f5ee92e2d63afc18" # Ubuntu 22.04 LTS
+  instance_type          = var.instance_type
+  subnet_id              = data.aws_subnets.default.ids[0]
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  key_name               = var.key_name
 
-  user_data = <<-EOF
+  user_data = <<EOF
 #!/bin/bash
 
 apt update -y
@@ -136,23 +134,19 @@ apt install -y docker.io awscli
 systemctl enable docker
 systemctl start docker
 
-ACCOUNT_ID=${data.aws_caller_identity.current.account_id}
-REGION=${var.aws_region}
-ECR_REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
-IMAGE="$ECR_REPO:${var.image_tag}"
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+REGION="${var.aws_region}"
+REPO="${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
+IMAGE="$REPO:${var.image_tag}"
 
-# Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-    --username AWS --password-stdin ${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com
+  --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.$REGION.amazonaws.com
 
-# Pull latest application image
 docker pull $IMAGE
 
-# Restart container if exists
 docker stop strapi || true
 docker rm strapi || true
 
-# Run Strapi container
 docker run -d --name strapi -p 1337:1337 \
   -e DATABASE_CLIENT=postgres \
   -e DATABASE_HOST=${aws_db_instance.postgres.address} \
@@ -179,8 +173,6 @@ output "rds_endpoint" {
 output "ecr_repo_url" {
   value = aws_ecr_repository.strapi.repository_url
 }
-
-
 
 
 
