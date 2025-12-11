@@ -22,6 +22,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      #############################################
+      # FIX: Enable Buildx in container-driver mode
+      #############################################
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver: docker-container
+
       - name: Set image tag (short SHA)
         id: set-tag
         run: |
@@ -37,8 +45,6 @@ jobs:
             aws ecr create-repository --repository-name "${REPO_NAME}"
           ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${REPO_NAME}"
           echo "ecr_repo=${ECR_URI}" >> $GITHUB_OUTPUT
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -55,3 +61,4 @@ jobs:
       - name: Show pushed image
         run: |
           echo "Pushed image: ${{ steps.ecr-info.outputs.ecr_repo }}:${{ steps.set-tag.outputs.image_tag }}"
+
