@@ -1,0 +1,186 @@
+#############################################
+# DEFAULT VPC & SUBNET DISCOVERY
+#############################################
+
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+#############################################
+# ECR REPOSITORY
+#############################################
+
+resource "aws_ecr_repository" "strapi" {
+  name = var.docker_repo
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+#############################################
+# SECURITY GROUP FOR EC2
+#############################################
+
+resource "aws_security_group" "ec2_sg" {
+  name        = "strapi-ec2-sg"
+  description = "Allow SSH + Strapi"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description = "Allow Strapi"
+    from_port   = 1337
+    to_port     = 1337
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow all outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+#############################################
+# SECURITY GROUP FOR RDS
+#############################################
+
+resource "aws_security_group" "rds_sg" {
+  name        = "strapi-rds-sg"
+  description = "Allow EC2 → Postgres"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description     = "Allow Postgres from EC2"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2_sg.id]
+  }
+
+  egress {
+    description = "Allow outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+#############################################
+# DB SUBNET GROUP
+#############################################
+
+resource "aws_db_subnet_group" "default" {
+  name       = "strapi-db-subnet-group"
+  subnet_ids = data.aws_subnets.default.ids
+}
+
+#############################################
+# RDS POSTGRES INSTANCE
+#############################################
+
+resource "aws_db_instance" "postgres" {
+  identifier              = "strapi-postgres-db"
+  engine                  = "postgres"
+  engine_version          = "15.3"
+  instance_class          = "db.t3.micro"
+
+  # IMPORTANT: We removed "name" argument (AWS restriction)
+  # RDS will default the database name to "postgres"
+
+  username                = var.db_username
+  password                = var.db_password
+  allocated_storage       = 20
+  skip_final_snapshot     = true
+
+  publicly_accessible     = false
+  db_subnet_group_name    = aws_db_subnet_group.default.name
+  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
+}
+
+#############################################
+# EC2 INSTANCE (Ubuntu)
+#############################################
+
+resource "aws_instance" "ubuntu" {
+  ami                         = "ami-0f5ee92e2d63afc18" # Ubuntu 22.04 LTS (ap-south-1)
+  instance_type               = var.instance_type
+  subnet_id                   = data.aws_subnets.default.ids[0]
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  key_name                    = var.key_name
+
+  user_data = <<EOF
+#!/bin/bash
+apt update -y
+apt install -y docker.io awscli
+systemctl enable docker
+systemctl start docker
+
+ACCOUNT_ID=${data.aws_caller_identity.current.account_id}
+REGION=${var.aws_region}
+REPO="${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
+IMAGE="$REPO:${var.image_tag}"
+
+# Login to ECR
+aws ecr get-login-password --region $REGION | docker login \
+    --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+# Pull image
+docker pull $IMAGE
+
+# Restart container if exists
+docker stop strapi || true
+docker rm strapi || true
+
+# Run Strapi container
+docker run -d --name strapi -p 1337:1337 \
+  -e DATABASE_CLIENT=postgres \
+  -e DATABASE_HOST=${aws_db_instance.postgres.address} \
+  -e DATABASE_PORT=5432 \
+  -e DATABASE_NAME=postgres \
+  -e DATABASE_USERNAME=${var.db_username} \
+  -e DATABASE_PASSWORD=${var.db_password} \
+  $IMAGE
+EOF
+
+  tags = {
+    Name = "${var.project}-ubuntu-ec2"
+  }
+}
+
+#############################################
+# OUTPUTS
+#############################################
+
+output "public_ip" {
+  value = aws_instance.ubuntu.public_ip
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.postgres.address
+}
+
+output "ecr_repo_url" {
+  value = aws_ecr_repository.strapi.repository_url
+}

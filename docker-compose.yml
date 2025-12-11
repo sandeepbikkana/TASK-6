@@ -1,0 +1,75 @@
+
+version: "3.8"
+
+networks:
+  strapi-net:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: strapi
+    networks:
+      - strapi-net
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  strapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: strapi-backend
+    restart: unless-stopped
+    networks:
+      - strapi-net
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 1337
+
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: strapi
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_SSL: "false"
+
+      APP_KEYS: "80312f8ef997d69c7db4c88451ebb4c28c1f5d6e6e9aa8ce07b4e8c6adc65cab,4431ca21f193793b0277f84d36b114806758716cb59dfa4d83bdd182429b985c,c95f9ae8512f2fa39aafdb4b307fb387529a0f3b373588438fe4f8c1d3acf280,cf4cf21e52921666578e85dc3d85c0c8ff375142d182a85a6cfdce64a0179f51"
+      API_TOKEN_SALT: Va7y+6mNUmvIqOPypz/Kgg==
+      ADMIN_JWT_SECRET: LntuLZeB8TIfGI0kG8jXFw==
+      JWT_SECRET: 9P0X30yd3Yln7RZ4H0V1Vg==
+      TRANSFER_TOKEN_SALT: bazggOYtpQEIG8CLkVtZbg==
+
+    volumes:
+      - ./public/uploads:/app/public/uploads
+      - ./database:/app/database
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx-proxy
+    restart: unless-stopped
+    networks:
+      - strapi-net
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - strapi
+
+volumes:
+  postgres_data:
