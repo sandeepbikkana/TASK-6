@@ -77,7 +77,7 @@ resource "aws_security_group" "ec2_sg" {
 
 resource "aws_security_group" "rds_sg" {
   name        = "sandeep-rds-sg-${random_string.suffix.result}"
-  description = "Allow EC2 → Postgres"
+  description = "Allow EC2 Postgres"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
@@ -188,6 +188,7 @@ output "rds_endpoint" {
 output "ecr_repo_url" {
   value = aws_ecr_repository.strapi.repository_url
 }
+
 
 
 
