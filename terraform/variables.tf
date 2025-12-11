@@ -10,7 +10,8 @@ variable "db_name" { default = "strapi" }
 variable "db_username" { default = "strapi" }
 variable "db_password" { default = "StrapiDB123!" }
 
-variable "key_name" { default = "" }
+variable "key_name" { default = "sandeep-test" }
 variable "project" {default = "sandeep"}
 variable "ACCOUNT_ID" { default = "301782007642" }
+
 
