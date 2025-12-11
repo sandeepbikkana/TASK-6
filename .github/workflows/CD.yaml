@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "ECR image tag (e.g. from CI output)"
+        description: 835c1be0
         required: true
         default: "latest"
       docker_repo:
