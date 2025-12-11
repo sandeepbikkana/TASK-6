@@ -1,6 +1,5 @@
-#############################################
+
 # DEFAULT VPC & SUBNET DISCOVERY
-#############################################
 
 data "aws_vpc" "default" {
   default = true
