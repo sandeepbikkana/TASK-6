@@ -123,14 +123,15 @@ resource "aws_db_instance" "postgres" {
 #############################################
 
 resource "aws_instance" "ubuntu" {
-  ami                         = "ami-0f5ee92e2d63afc18" # Ubuntu 22.04 LTS (ap-south-1)
-  instance_type               = var.instance_type
-  subnet_id                   = data.aws_subnets.default.ids[0]
-  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
-  key_name                    = var.key_name
+  ami                    = "ami-0f5ee92e2d63afc18"
+  instance_type          = var.instance_type
+  subnet_id              = data.aws_subnets.default.ids[0]
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  key_name               = var.key_name
 
-  user_data = <<EOF
+  user_data = <<-EOF
 #!/bin/bash
+
 apt update -y
 apt install -y docker.io awscli
 systemctl enable docker
@@ -138,21 +139,21 @@ systemctl start docker
 
 ACCOUNT_ID=${data.aws_caller_identity.current.account_id}
 REGION=${var.aws_region}
-REPO="${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
+REPO="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
 # Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-    --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+  --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
 
 # Pull image
 docker pull $IMAGE
 
-# Restart container if exists
+# Stop previous container if exists
 docker stop strapi || true
 docker rm strapi || true
 
-# Run Strapi container
+# Run Strapi
 docker run -d --name strapi -p 1337:1337 \
   -e DATABASE_CLIENT=postgres \
   -e DATABASE_HOST=${aws_db_instance.postgres.address} \
@@ -161,10 +162,11 @@ docker run -d --name strapi -p 1337:1337 \
   -e DATABASE_USERNAME=${var.db_username} \
   -e DATABASE_PASSWORD=${var.db_password} \
   $IMAGE
+
 EOF
 
   tags = {
-    Name = "${var.project}-ubuntu-ec2"
+    Name = "${var.project}-ubuntu"
   }
 }
 
@@ -180,4 +182,5 @@ output "rds_endpoint" {
 output "ecr_repo_url" {
   value = aws_ecr_repository.strapi.repository_url
 }
+
 
