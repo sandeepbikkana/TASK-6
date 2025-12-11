@@ -1,3 +1,4 @@
-output "strapi_url" {
-  value = "http://${aws_instance.strapi.public_ip}"
+
+output "public_ip" {
+  value = aws_instance.ubuntu.public_ip
 }

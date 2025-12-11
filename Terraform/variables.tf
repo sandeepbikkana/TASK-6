@@ -1,7 +1,14 @@
-variable "region" { default = "ap-south-1" }
-variable "project" { default = "strapi-app" }
-variable "instance_type" { default = "t3.small" }
-variable "key_name" { default = "key-test" }
+variable "aws_region" { default = "ap-south-1" }
 
-variable "db_username" { default = "postgres" }
-variable "db_password" { default = "postgres" }
+variable "instance_type" { default = "t3.micro" }
+
+variable "docker_repo" { type = string }
+
+variable "image_tag" { type = string }
+
+variable "db_name" { default = "strapi" }
+variable "db_username" { default = "strapi" }
+variable "db_password" { default = "Strapi@1234" }
+
+variable "key_name" { default = "" }
+variable "project" {default = "sandeep"}
