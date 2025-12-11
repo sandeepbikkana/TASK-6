@@ -147,12 +147,12 @@ systemctl start docker
 
 ACCOUNT_ID=${data.aws_caller_identity.current.account_id}
 REGION=${var.aws_region}
-ECR_REPO="${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}-${random_string.suffix.result}"
+ECR_REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}-${random_string.suffix.result}"
 IMAGE="$ECR_REPO:${var.image_tag}"
 
 # Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-    --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com
+    --username AWS --password-stdin ${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com
 
 # Pull latest application image
 docker pull $IMAGE
@@ -188,5 +188,6 @@ output "rds_endpoint" {
 output "ecr_repo_url" {
   value = aws_ecr_repository.strapi.repository_url
 }
+
 
 
