@@ -1,12 +1,3 @@
-#############################################
-# RANDOM SUFFIX FOR UNIQUE RESOURCE CREATION
-#############################################
-
-resource "random_string" "suffix" {
-  length  = 4
-  upper   = false
-  special = false
-}
 
 #############################################
 # DEFAULT VPC & SUBNET DISCOVERY
@@ -30,7 +21,7 @@ data "aws_caller_identity" "current" {}
 #############################################
 
 resource "aws_ecr_repository" "strapi" {
-  name = "${var.docker_repo}-${random_string.suffix.result}"
+  name = "${var.docker_repo}
 
   image_scanning_configuration {
     scan_on_push = true
@@ -42,7 +33,7 @@ resource "aws_ecr_repository" "strapi" {
 #############################################
 
 resource "aws_security_group" "ec2_sg" {
-  name        = "sandeep-ec2-sg-${random_string.suffix.result}"
+  name        = "sandeep-ec2-sg"
   description = "Allow SSH + Strapi"
   vpc_id      = data.aws_vpc.default.id
 
@@ -76,7 +67,7 @@ resource "aws_security_group" "ec2_sg" {
 #############################################
 
 resource "aws_security_group" "rds_sg" {
-  name        = "sandeep-rds-sg-${random_string.suffix.result}"
+  name        = "sandeep-rds-sg"
   description = "Allow EC2 Postgres"
   vpc_id      = data.aws_vpc.default.id
 
@@ -102,7 +93,7 @@ resource "aws_security_group" "rds_sg" {
 #############################################
 
 resource "aws_db_subnet_group" "default" {
-  name       = "sandeep-db-subnet-group-${random_string.suffix.result}"
+  name       = "sandeep-db-subnet-group"
   subnet_ids = data.aws_subnets.default.ids
 }
 
@@ -111,7 +102,7 @@ resource "aws_db_subnet_group" "default" {
 #############################################
 
 resource "aws_db_instance" "postgres" {
-  identifier              = "sandeep-postgres-${random_string.suffix.result}"
+  identifier              = "sandeep-postgres"
   engine                  = "postgres"
   engine_version          = "15.15"
   instance_class          = "db.t3.micro"
@@ -147,7 +138,7 @@ systemctl start docker
 
 ACCOUNT_ID=${data.aws_caller_identity.current.account_id}
 REGION=${var.aws_region}
-ECR_REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}-${random_string.suffix.result}"
+ECR_REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
 IMAGE="$ECR_REPO:${var.image_tag}"
 
 # Login to ECR
@@ -174,7 +165,7 @@ docker run -d --name strapi -p 1337:1337 \
 EOF
 
   tags = {
-    Name = "sandeep-ec2-${random_string.suffix.result}"
+    Name = "sandeep-ec2"
   }
 }
 
@@ -188,6 +179,7 @@ output "rds_endpoint" {
 output "ecr_repo_url" {
   value = aws_ecr_repository.strapi.repository_url
 }
+
 
 
 
