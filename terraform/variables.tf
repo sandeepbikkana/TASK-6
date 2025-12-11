@@ -12,4 +12,4 @@ variable "db_password" { default = "Strapi@1234" }
 
 variable "key_name" { default = "" }
 variable "project" {default = "sandeep"}
-
+variable "ACCOUNT_ID" { default = "301782007642" }
