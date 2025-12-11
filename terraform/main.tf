@@ -16,11 +16,11 @@ data "aws_subnets" "default" {
 data "aws_caller_identity" "current" {}
 
 #############################################
-# ECR REPOSITORY
+# ECR REPOSITORY  (MUST BE IMPORTED FIRST)
 #############################################
 
 resource "aws_ecr_repository" "strapi" {
-  name = var.docker_repo
+  name = var.docker_repo   # Example: sandeep-strapi
 
   image_scanning_configuration {
     scan_on_push = true
@@ -101,7 +101,7 @@ resource "aws_db_subnet_group" "default" {
 resource "aws_db_instance" "postgres" {
   identifier              = "sandeep-postgres-db"
   engine                  = "postgres"
-  engine_version          = "15.15"
+  engine_version          = "15.5"
   instance_class          = "db.t3.micro"
   allocated_storage       = 20
 
@@ -139,14 +139,18 @@ REGION="${var.aws_region}"
 REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
+# Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-  --username AWS --password-stdin ${var.ACCOUNT_ID}.dkr.ecr.$REGION.amazonaws.com
+  --username AWS --password-stdin ${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com
 
+# Pull image
 docker pull $IMAGE
 
+# Restart container
 docker stop strapi || true
 docker rm strapi || true
 
+# Run Strapi
 docker run -d --name strapi -p 1337:1337 \
   -e DATABASE_CLIENT=postgres \
   -e DATABASE_HOST=${aws_db_instance.postgres.address} \
@@ -166,6 +170,7 @@ EOF
 #############################################
 # OUTPUTS
 #############################################
+
 output "rds_endpoint" {
   value = aws_db_instance.postgres.address
 }
@@ -173,7 +178,6 @@ output "rds_endpoint" {
 output "ecr_repo_url" {
   value = aws_ecr_repository.strapi.repository_url
 }
-
 
 
 
