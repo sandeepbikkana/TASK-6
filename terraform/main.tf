@@ -126,7 +126,7 @@ resource "aws_instance" "ubuntu" {
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
   key_name               = var.key_name
 
- user_data = <<-EOF
+user_data = <<-EOF
 #!/bin/bash
 
 apt update -y
@@ -134,14 +134,33 @@ apt install -y docker.io awscli
 systemctl enable docker
 systemctl start docker
 
+# Configure AWS credentials (from GitHub secrets → Terraform → EC2)
+mkdir -p /root/.aws
+
+cat <<AWSCFG >/root/.aws/credentials
+[default]
+aws_access_key_id=${var.aws_access_key}
+aws_secret_access_key=${var.aws_secret_key}
+region=${var.aws_region}
+AWSCFG
+
+cat <<AWSCONF >/root/.aws/config
+[default]
+region=${var.aws_region}
+output=json
+AWSCONF
+
+# Confirm AWS configuration
+aws sts get-caller-identity
+
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGION="${var.aws_region}"
-REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
+REPO="${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
 # Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-  --username AWS --password-stdin ${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com
+  --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.$REGION.amazonaws.com
 
 # Pull image
 docker pull $IMAGE
@@ -150,7 +169,7 @@ docker pull $IMAGE
 docker stop strapi || true
 docker rm strapi || true
 
-# Run Strapi 
+# Run Strapi
 docker run -d --name strapi -p 1337:1337 \
   -e APP_KEYS="ba93e7f9a88b4e648aa9e2d1d8b3c7ff,8c44e9a0dc4f452da9b2b6e8a09bfc3d,fc8c319a89d64c95b8e6f4420f2e7da4,b7b3a4e26bb94a09a5e6288d2f2e0d19" \
   -e ADMIN_JWT_SECRET="8fa2a7bcb6a6400a85e3a5b87d23b8c9" \
@@ -183,6 +202,7 @@ output "rds_endpoint" {
 #output "ecr_repo_url" {
 #  value = aws_ecr_repository.strapi.repository_url
 #}
+
 
 
 
