@@ -19,13 +19,13 @@ data "aws_caller_identity" "current" {}
 # ECR REPOSITORY  (MUST BE IMPORTED FIRST)
 #############################################
 
-resource "aws_ecr_repository" "strapi" {
-  name = var.docker_repo   # Example: sandeep-strapi
+#resource "aws_ecr_repository" "strapi" {
+#  name = var.docker_repo   # Example: sandeep-strapi
 
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-}
+#  image_scanning_configuration {
+#    scan_on_push = true
+#  }
+#}
 
 #############################################
 # SECURITY GROUP FOR EC2
@@ -126,7 +126,7 @@ resource "aws_instance" "ubuntu" {
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
   key_name               = var.key_name
 
-  user_data = <<EOF
+ user_data = <<-EOF
 #!/bin/bash
 
 apt update -y
@@ -136,12 +136,12 @@ systemctl start docker
 
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGION="${var.aws_region}"
-REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
+REPO="${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
 # Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-  --username AWS --password-stdin ${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com
+  --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com
 
 # Pull image
 docker pull $IMAGE
@@ -150,17 +150,22 @@ docker pull $IMAGE
 docker stop strapi || true
 docker rm strapi || true
 
-# Run Strapi
+# Run Strapi 
 docker run -d --name strapi -p 1337:1337 \
+  -e APP_KEYS="ba93e7f9a88b4e648aa9e2d1d8b3c7ff,8c44e9a0dc4f452da9b2b6e8a09bfc3d,fc8c319a89d64c95b8e6f4420f2e7da4,b7b3a4e26bb94a09a5e6288d2f2e0d19" \
+  -e ADMIN_JWT_SECRET="8fa2a7bcb6a6400a85e3a5b87d23b8c9" \
+  -e API_TOKEN_SALT="OTM4YzQ3ZjZlM2EzN2Q2Ng==" \
+  -e JWT_SECRET="JHNKA9NVfw0Oi2VsIA06Tw==" \
   -e DATABASE_CLIENT=postgres \
   -e DATABASE_HOST=${aws_db_instance.postgres.address} \
   -e DATABASE_PORT=5432 \
-  -e DATABASE_NAME=postgres \
+  -e DATABASE_NAME=${aws_db_instance.postgres.identifier} \
   -e DATABASE_USERNAME=${var.db_username} \
-  -e DATABASE_PASSWORD=${var.db_password} \
+  -e DATABASE_PASSWORD="${var.db_password}" \
   $IMAGE
 
 EOF
+
 
   tags = {
     Name = "sandeep-ec2"
@@ -175,9 +180,10 @@ output "rds_endpoint" {
   value = aws_db_instance.postgres.address
 }
 
-output "ecr_repo_url" {
-  value = aws_ecr_repository.strapi.repository_url
-}
+#output "ecr_repo_url" {
+#  value = aws_ecr_repository.strapi.repository_url
+#}
+
 
 
 
