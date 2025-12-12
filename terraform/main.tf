@@ -153,17 +153,19 @@ AWSCONF
 # Verify AWS access
 aws sts get-caller-identity
 
-# Correct variable usage
-ACCOUNT_ID="${var.account_id}"
+# Get AWS Account ID automatically
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGION="${var.aws_region}"
+
+# Construct ECR repo and image tag
 REPO="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
-# Login to ECR
+# ECR Login
 aws ecr get-login-password --region $REGION | docker login \
-  --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.$REGION.amazonaws.com
+  --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
 
-# Pull Strapi image
+# Pull image
 docker pull $IMAGE
 
 # Restart container
@@ -176,7 +178,6 @@ docker run -d --name strapi -p 1337:1337 \
   -e ADMIN_JWT_SECRET="8fa2a7bcb6a6400a85e3a5b87d23b8c9" \
   -e API_TOKEN_SALT="OTM4YzQ3ZjZlM2EzN2Q2Ng==" \
   -e JWT_SECRET="JHNKA9NVfw0Oi2VsIA06Tw==" \
-  -e DATABASE_CLIENT=postgres \
   -e DATABASE_HOST=${aws_db_instance.postgres.address} \
   -e DATABASE_PORT=5432 \
   -e DATABASE_NAME=postgres \
@@ -204,6 +205,7 @@ output "rds_endpoint" {
 #output "ecr_repo_url" {
 #  value = aws_ecr_repository.strapi.repository_url
 #}
+
 
 
 
