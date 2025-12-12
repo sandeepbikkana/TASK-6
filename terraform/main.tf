@@ -150,19 +150,19 @@ region=${var.aws_region}
 output=json
 AWSCONF
 
-# Fetch AWS Account ID
+# Get account ID
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGION="${var.aws_region}"
 
-# Build ECR repository URL
-REPO="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${var.docker_repo}"
+# Build ECR repo URL (NO ${} used for shell vars)
+REPO="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
 # Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-  --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+  --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
 
-# Pull Strapi image
+# Pull Docker image
 docker pull $IMAGE
 
 # Restart container
@@ -187,6 +187,7 @@ EOF
 
 
 
+
   tags = {
     Name = "sandeep-ec2"
   }
@@ -203,6 +204,7 @@ output "rds_endpoint" {
 #output "ecr_repo_url" {
 #  value = aws_ecr_repository.strapi.repository_url
 #}
+
 
 
 
