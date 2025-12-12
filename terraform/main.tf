@@ -101,7 +101,7 @@ resource "aws_db_subnet_group" "default" {
 resource "aws_db_instance" "postgres" {
   identifier              = "sandeep-postgres-db"
   engine                  = "postgres"
-  engine_version          = "15.5"
+  engine_version          = "15.15"
   instance_class          = "db.t3.micro"
   allocated_storage       = 20
 
@@ -183,6 +183,7 @@ output "rds_endpoint" {
 #output "ecr_repo_url" {
 #  value = aws_ecr_repository.strapi.repository_url
 #}
+
 
 
 
