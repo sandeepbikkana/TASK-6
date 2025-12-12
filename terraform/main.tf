@@ -134,7 +134,7 @@ apt install -y docker.io awscli
 systemctl enable docker
 systemctl start docker
 
-# Configure AWS credentials (from GitHub secrets → Terraform → EC2)
+# Configure AWS credentials
 mkdir -p /root/.aws
 
 cat <<AWSCFG >/root/.aws/credentials
@@ -150,26 +150,27 @@ region=${var.aws_region}
 output=json
 AWSCONF
 
-# Confirm AWS configuration
+# Verify AWS access
 aws sts get-caller-identity
 
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+# Correct variable usage
+ACCOUNT_ID="${var.account_id}"
 REGION="${var.aws_region}"
-REPO="${var.ACCOUNT_ID}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.docker_repo}"
+REPO="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
 # Login to ECR
 aws ecr get-login-password --region $REGION | docker login \
-  --username AWS --password-stdin ${var.ACCOUNT_ID}.dkr.ecr.$REGION.amazonaws.com
+  --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.$REGION.amazonaws.com
 
-# Pull image
+# Pull Strapi image
 docker pull $IMAGE
 
 # Restart container
 docker stop strapi || true
 docker rm strapi || true
 
-# Run Strapi
+# Run Strapi container
 docker run -d --name strapi -p 1337:1337 \
   -e APP_KEYS="ba93e7f9a88b4e648aa9e2d1d8b3c7ff,8c44e9a0dc4f452da9b2b6e8a09bfc3d,fc8c319a89d64c95b8e6f4420f2e7da4,b7b3a4e26bb94a09a5e6288d2f2e0d19" \
   -e ADMIN_JWT_SECRET="8fa2a7bcb6a6400a85e3a5b87d23b8c9" \
@@ -178,12 +179,13 @@ docker run -d --name strapi -p 1337:1337 \
   -e DATABASE_CLIENT=postgres \
   -e DATABASE_HOST=${aws_db_instance.postgres.address} \
   -e DATABASE_PORT=5432 \
-  -e DATABASE_NAME=${aws_db_instance.postgres.identifier} \
+  -e DATABASE_NAME=postgres \
   -e DATABASE_USERNAME=${var.db_username} \
   -e DATABASE_PASSWORD="${var.db_password}" \
   $IMAGE
 
 EOF
+
 
 
   tags = {
@@ -202,6 +204,7 @@ output "rds_endpoint" {
 #output "ecr_repo_url" {
 #  value = aws_ecr_repository.strapi.repository_url
 #}
+
 
 
 
