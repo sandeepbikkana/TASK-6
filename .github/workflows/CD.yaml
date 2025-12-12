@@ -6,7 +6,7 @@ on:
       image_tag:
         description: 835c1be0
         required: true
-        default: "latest"
+        default: ""
       docker_repo:
         description: "ECR repository URI (optional, will be discovered if empty)"
         required: false
