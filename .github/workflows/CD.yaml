@@ -39,11 +39,13 @@ jobs:
         
       - name: Terraform Plan
         working-directory: terraform/
-        run: terraform plan \
-          -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-          -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-          -var="image_tag=${{ github.event.inputs.image_tag }}" \
-          -out=tfplan
+        run: |
+          terraform plan -input=false \
+            -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -var="image_tag=${{ github.event.inputs.image_tag }}" \
+            -out=tfplan
+
 
       - name: Terraform Apply
         working-directory: terraform/
