@@ -154,7 +154,7 @@ AWSCONF
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGION="${var.aws_region}"
 
-# Build ECR repo URL (NO ${} used for shell vars)
+# Build ECR repo URL
 REPO="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/${var.docker_repo}"
 IMAGE="$REPO:${var.image_tag}"
 
@@ -204,6 +204,7 @@ output "rds_endpoint" {
 #output "ecr_repo_url" {
 #  value = aws_ecr_repository.strapi.repository_url
 #}
+
 
 
 
